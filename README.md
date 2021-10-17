@@ -1,4 +1,4 @@
-# Projects
+# Generalized-Linear-Models-to-Predict-Birth-Weight
 
 Examples of several projects I have built as part of the BSc - Statistics and Data Science.
 
