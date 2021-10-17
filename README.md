@@ -1,4 +1,4 @@
-# Generalized-Linear-Models-to-Predict-Birth-Weight
+# Generalized Linear Models to Predict Low BirthWeight
 
 Final Project in Generalized Linear Models Course:
 
