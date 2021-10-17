@@ -15,6 +15,7 @@ The project includes:
     o Examining different distributions and trends of the continuous variables
     
   - Adaptation of an initial Logistic Regression model
+  - Hypothesis Testing
   - Improving the model by using various methods such as removing variables that do not add important information, Analysis residues and removing abnormal observations, and         adding linear combinations on the explanatory variables.
   - Select the improved Logistic regression model which will best predict the probability of newborn low birthweight.
 
