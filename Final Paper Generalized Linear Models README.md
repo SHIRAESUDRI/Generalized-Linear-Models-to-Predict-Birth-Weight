@@ -2,7 +2,7 @@
 Analyze data and fit Logistic Regression Model to predict probability of newborn low birthweight, using R, Preliminary Analysis, Hypothesis Testing and Residual Diagnosis.
 
 The project includes:
-  - Preliminary analysis of the data
+  - Preliminary analysis of the data:
     o Examining interesting relationships between explanatory variables and Analysis different types of variables
     o Examining Suspicious observations
     o Examination of residues
