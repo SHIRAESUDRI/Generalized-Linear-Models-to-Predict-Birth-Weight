@@ -3,12 +3,18 @@ Analyze data and fit Logistic Regression Model to predict probability of newborn
 
 The project includes:
   - Preliminary analysis of the data:
+  
     o Examining interesting relationships between explanatory variables and Analysis different types of variables
+    
     o Examining Suspicious observations
+    
     o Examination of residues
+    
     o Correlations between the variables
+    
     o Examining different distributions and trends of the continuous variables
+    
   - Adaptation of an initial Logistic Regression model
   - Improving the model by using various methods such as removing variables that do not add important information, Analysis residues and removing abnormal observations, and         adding linear combinations on the explanatory variables.
-  - Finally, select the improved Logistic regression model which will best predict the probability of newborn low birthweight.
+  - Select the improved Logistic regression model which will best predict the probability of newborn low birthweight.
 
