@@ -1,0 +1,222 @@
+---
+title: "Final Report Generalized Linear Models Code - Shira Esudri"
+output: html_document
+---
+
+
+```{r}
+#libraries
+library(tidyverse)
+library(dummies)
+library('MASS')
+library('bestglm')
+library(olsrr)
+library(RCurl)
+library(GGally)
+library(ggplot2)
+library(Hmisc)
+library(tidyverse)
+library(datasets)
+library(gmodels)
+library(gridExtra)
+library(car)
+
+options(scipen = 999) #to handle the scientific display
+
+```
+
+
+```{r}
+#load the data
+birth_data <- read.table("birthwt.data.157.txt", header = F, stringsAsFactors = FALSE)
+birth_data <- birth_data[1:158,]
+
+#orgenaize the data
+names(birth_data) <- birth_data %>% slice(1) %>% unlist()
+birth_data <- birth_data %>% slice(-1)
+
+#change the continuous variables and the Y into numeric type
+birth_data$age = as.numeric(birth_data$age)
+birth_data$lwt = as.numeric(birth_data$lwt)
+birth_data$bwt = as.numeric(birth_data$bwt)
+```
+
+```{r}
+#splite the race to three different categorial variables
+race <-birth_data$race
+birth_data <- data.frame(birth_data,dummy(race))
+
+#set the names
+names(birth_data)[which(names(birth_data) == "birth_dataother")] = "other" #60 other
+names(birth_data)[which(names(birth_data) == "birth_datawhite")] = "white" #74 white
+
+#split the data to two categorial variables
+birth_data = subset(birth_data,select = -c(race))
+
+#define variables
+continuous  <- c("age","lwt","bwt")
+categorial <- c("smoke","ht","ui", "ftv", "ptl","other", "white")
+
+```
+
+```{r}
+#CrossTable frequencies for y with categorial variables
+for(name in categorial){
+  CrossTable(x = birth_data$low, y = birth_data[,name], prop.c=F, prop.t=F, prop.chisq=F,prop.r = F)
+}
+```
+
+```{r}
+# histogram distributions of continuous variables 
+ggplot(birth_data, aes(x = age)) + geom_histogram(bins = 30,color = "pink3",fill = "pink1") + labs(title = "Mothers' Age Distribution",x="Age")+geom_vline(aes(xintercept = mean(age)),col='black',size=0.5)  +geom_text(aes(label="mean: 23.3",y=0,x= mean(age)+2),vjust=-20,col='black',size=4) +theme_classic()
+
+ggplot(birth_data, aes(x = lwt)) + geom_histogram(bins = 30,color = "pink3",fill = "pink1") + labs(title = "Mothers' Weight Distribution",x="Weight in pounds")+ geom_vline(aes(xintercept = mean(lwt)),col='black',size=0.5) +geom_text(aes(label="mean: 129.6",y=0,x= mean(lwt)+20),vjust=-20,col='black',size=4) +theme_classic()
+
+ggplot(birth_data, aes(x = bwt)) + geom_histogram(bins = 30,color = "pink3",fill = "pink1") + labs(title = "Birth Weight Age Distribution",x="Baby's Weight in grams") +geom_vline(aes(xintercept = mean(bwt)),col='black',size=0.5)  +geom_text(aes(label="mean: 2945.6",y=0,x= mean(bwt)+380),vjust=-20,col='black',size=4) +theme_classic()
+
+summary(birth_data$lwt)  
+summary(birth_data$age)  
+summary(birth_data$bwt)  
+```
+
+```{r}
+#correlations between Y(low weight) and continuous variables and Scatterplots
+contin.dat = birth_data[,continuous]
+contin.dat$age = contin.dat$age 
+contin.dat$lwt = contin.dat$lwt
+contin.dat$bwt = contin.dat$bwt
+ggscatmat(contin.dat)
+```
+
+```{r}
+# relation between continuous and categorical explanatory variables
+names = c("Smoke","Hypertension","Uterine Irritability","FTV","Previous Premature Labors")
+categorial_ <- c("smoke","ht","ui", "ftv", "ptl")
+
+for(i in 1:5){
+  p = ggplot(birth_data, aes(x=birth_data[,i+3], y=age)) + geom_boxplot()+labs(x=names[i],y="Mother's Age")
+  p2= ggplot(birth_data, aes(x=birth_data[,i+3], y=lwt)) + geom_boxplot()+labs(x=names[i],y="Mother's Weight")
+  box = grid.arrange(p, p2,  ncol=2)
+}
+
+#just for race
+p_ = ggplot(birth_data, aes(x=race, y=age)) + geom_boxplot()+labs(x="Race",y="Mother's Age")
+p2_= ggplot(birth_data, aes(x=race, y=lwt)) + geom_boxplot()+labs(x="Race",y="Mother's Weight")
+box = grid.arrange(p_, p2_,  ncol=2)
+```
+
+```{r}
+# relation between Y and continuous explanatory variables
+a = ggplot(birth_data, aes(x=low, y=age)) + geom_boxplot()+labs(x="Low Birth Weight",y="Mother's Age")
+a2 = ggplot(birth_data, aes(x=low, y=lwt)) + geom_boxplot()+labs(x="Low Birth Weight",y="Mother Weight - in pounds")
+box <- grid.arrange(a, a2,  ncol=2,top = "Boxplots of Low Birth Weight variable with Continuous variables")
+```
+
+```{r}
+birth_data$low = as.numeric(birth_data$low)
+
+#glm model logit  with all the variables (no birth weight)
+glm_model = glm(formula = low ~ age + smoke + white + other + ui + lwt + ht + ftv + ptl, family = binomial(link = "logit"), data = birth_data)
+summary(glm_model)
+
+#abnormal observations full model
+avPlots(glm_model, col.lines = "pink2")
+```
+
+
+```{r}
+#model selection
+#aic
+model.aic.backward = step(glm_model, direction = "both", trace = 1)
+#low ~ smoke + white + ui + lwt + ht + ptl
+
+model = glm(low ~ smoke + white + ui + lwt + 
+    ht + ptl, family = binomial(link = "logit"), data = birth_data)
+summary(model) #aic 171.6
+```
+
+```{r}
+#Checking residuals
+
+#The two plot are the deviance residuals and pearson residuals against the fitted values to look for outliers.
+mu.hat = model$fitted	# estimated mu
+response.resid = residuals(model, type="response")  # get mu.hat and y - mu.hat
+deviance.resid = residuals(model, type="deviance")
+pearson.resid = residuals(model, type="pearson")
+working.resid = residuals(model, type="working")
+
+par(mfrow=c(1,2))
+plot(mu.hat, (abs(response.resid)),col = (ifelse(response.resid > 0.9 ,"hotpink1","black")))
+plot(mu.hat, response.resid,col = (ifelse(response.resid > 0.9 ,"hotpink1","black")))
+par(mfrow=c(1,1))
+
+#use deviance residuals and pearson residuals to look for outliers.
+par(mfrow=c(1,3))
+plot(mu.hat, pearson.resid,col = (ifelse(pearson.resid > 3|pearson.resid < -2 ,"hotpink1","black")))
+identify(mu.hat, pearson.resid)
+plot(mu.hat, deviance.resid,col = (ifelse(deviance.resid > 2|deviance.resid < -1.8 ,"hotpink1","black")))
+identify(mu.hat, deviance.resid)
+plot(mu.hat, working.resid,col = (ifelse(pearson.resid > 3|pearson.resid < -2 ,"hotpink1","black")))
+par(mfrow=c(1,1))
+
+#outliers
+avPlots(model, col.lines = "pink") 
+#According to these graphs four unusual observations can be seen: 126,151,139.
+
+#Cook's Distance
+h.ii = hatvalues(model)
+D.ii = cooks.distance(model)
+plot(h.ii, D.ii, main = "Cook's Distance")
+identify(h.ii,D.ii)
+text(x=h.ii, y= D.ii,labels = ifelse(D.ii > 0.1 ,names(D.ii),NA),pos = 1)    
+```
+
+
+```{r}
+#fit the model without observation number 151
+no.151 = 1:157
+no.151 = (no.151 != 151)
+
+logit.2 = glm(low[no.151] ~ smoke[no.151] + white[no.151] + ui[no.151] + lwt[no.151] + ht[no.151] + ptl[no.151] , data = birth_data, family = binomial(link = "logit"))
+summary(logit.2) #the AIC is lower 166
+
+#fit the model without observation number 126
+no.126 = 1:157
+no.126 = (no.126 != 126)
+
+logit.3 = glm(low[no.126] ~ smoke[no.126] + white[no.126] + ui[no.126] + lwt[no.126] + ht[no.126] + ptl[no.126] , data = birth_data, family = binomial(link = "logit"))
+summary(logit.3) #the AIC is lower: 166
+
+#fit the model without observation number 10
+no.10 = 1:157
+no.10 = (no.10 != 10)
+
+logit.5 = glm(low[no.10] ~ smoke[no.10] + white[no.10] + ui[no.10] + lwt[no.10] + ht[no.10] + ptl[no.10] , data = birth_data, family = binomial(link = "logit"))
+summary(logit.5) #the AIC is lower 167
+
+
+#try to remove them all three
+
+#fit the model without observation number 126&151
+no.126and151 = 1:157
+no.126and151 = ( no.126and151 !=151 & no.126and151 !=126)
+logit.6 = glm(low ~ smoke + white + ui + lwt + ht + ptl , data = birth_data[no.126and151,], family = binomial(link = "logit"))
+summary(logit.6) #the AIC is lower: 160
+```
+
+```{r}
+#accuracy table:
+y_pred <- rep(0,length(model$fitted.values))
+y_pred[which(model$fitted.values>0.5)] <- 1
+
+summary_table <- table(y_pred,birth_data$low,dnn = c("y^","y"))
+accursy = round((summary_table[1,1]+ summary_table[2,2])/157,3)
+summary_table
+paste0("accuracy of the model: ", accursy*100,"%")
+```
+
+```{r}
+# fit linear regression model 
+model_reg = lm(birth_data$bwt[no.126and151] ~  smoke + white + ui + lwt + ht + ptl , data=birth_data[no.126and151,])
+summary(model_reg)
+```
